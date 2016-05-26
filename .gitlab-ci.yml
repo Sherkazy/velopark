@@ -1,0 +1,28 @@
+image: php:5.5
+
+before_script:
+  - composer install
+  - app/console doctrine:database:create --if-not-exists
+  - app/console doctrine:schema:update --dump-sql
+  - app/console doctrine:schema:update --force
+  - app/console fos:user:create --super-admin newadmin newadmin@mail.com newadmin || echo 'newadmin is exists'
+
+
+stages:
+  - build
+  - test
+  - deploy
+
+job1:
+  stage: build
+  script:
+    - mkdir -p web/uploads
+    - app/console fos:user:create --super-admin admin admin@gmail.com admin || echo 'admin is exists'
+    - setfacl -R -m u:www-data:rwX -m u:`whoami`:rwX app/cache app/logs web/uploads
+    - setfacl -dR -m u:www-data:rwx -m u:`whoami`:rwx app/cache app/logs web/uploads
+    - app/console cache:clear
+    - app/console assets:install
+  only:
+    - master
+  tags:
+    - my-runner
